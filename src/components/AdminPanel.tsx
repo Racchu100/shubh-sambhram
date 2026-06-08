@@ -632,7 +632,7 @@ export default function AdminPanel({
                         <strong className="gradient-text-gold">{eliminateWinner}</strong>
                       </div>
                     )}
-                    {eliminateTieWinners.length > 0 && !eliminateWinner && !eliminateIsTieBreaker && (
+                    {eliminateTieWinners.length > 0 && !eliminateWinner && (eliminateIsFinished || !eliminateIsTieBreaker) && (
                       <div style={{ marginTop: "15px", display: "flex", flexDirection: "column", gap: "10px" }}>
                         <div className="glass-panel" style={{ padding: "8px", borderColor: "var(--magenta-primary)", textAlign: "center" }}>
                           <span style={{ fontSize: "0.85rem", color: "var(--magenta-primary)", fontWeight: "bold" }}>

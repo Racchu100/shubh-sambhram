@@ -990,6 +990,7 @@ export default function Sandbox({
   };
 
   const handleStartEliminateTieBreaker = () => {
+    const survivors = eliminateTieWinners;
     setEliminateIsTieBreaker(true);
     setEliminateIsFinished(false);
     setEliminatePlayerVote(null);
@@ -1003,10 +1004,19 @@ export default function Sandbox({
       { id: "dhol", label: "🥁 Punjabi Dhol", eliminated: false, votes: 0 },
     ];
     setEliminateOptions(resetOptions);
-    setEliminateSurvivors(eliminateTieWinners);
-    setEliminateRound("Tie-Breaker");
+    setEliminateSurvivors(survivors);
+    setEliminateTieWinners([]);
 
-    const { votesMap, voteCounts } = simulateBotVotes(eliminateTieWinners, resetOptions);
+    setEliminateRound((prev) => {
+      if (prev === "Tie-Breaker") return "Tie-Breaker 2";
+      if (typeof prev === "string" && prev.startsWith("Tie-Breaker")) {
+        const num = parseInt(prev.split(" ")[1] || "1");
+        return `Tie-Breaker ${num + 1}`;
+      }
+      return "Tie-Breaker";
+    });
+
+    const { votesMap, voteCounts } = simulateBotVotes(survivors, resetOptions);
     setEliminateBotVotes(votesMap);
 
     setEliminateOptions(
