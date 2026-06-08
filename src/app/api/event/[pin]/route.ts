@@ -1,19 +1,145 @@
 import { NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
 
-// Ensure state directory exists
-const STATES_DIR = path.join(process.cwd(), ".game_states");
-if (!fs.existsSync(STATES_DIR)) {
-  fs.mkdirSync(STATES_DIR, { recursive: true });
+const REGISTRY_BLOB_ID = "019ea6a7-1062-7669-adb8-86ec162e17ae";
+const REGISTRY_URL = `https://jsonblob.com/api/jsonBlob/${REGISTRY_BLOB_ID}`;
+
+// Local memory backup map in case JSONBlob service has network issues or is rate limited
+const localBackupStates: Record<string, any> = {};
+const localBackupRegistry: Record<string, string> = {};
+
+// Helper to fetch the registry map (PIN -> Blob ID)
+async function getRegistry(): Promise<Record<string, string>> {
+  try {
+    const res = await fetch(REGISTRY_URL, { 
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+      cache: "no-store" 
+    });
+    if (res.ok) {
+      const data = await res.json();
+      Object.assign(localBackupRegistry, data);
+      return data;
+    }
+  } catch (err) {
+    console.error("Error fetching JSONBlob registry:", err);
+  }
+  return localBackupRegistry;
 }
 
-function getFilePath(pin: string) {
-  return path.join(STATES_DIR, `state_${pin.toUpperCase()}.json`);
+// Helper to save/update the registry map
+async function saveRegistry(registry: Record<string, string>) {
+  try {
+    Object.assign(localBackupRegistry, registry);
+    await fetch(REGISTRY_URL, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(registry),
+    });
+  } catch (err) {
+    console.error("Error saving JSONBlob registry:", err);
+  }
 }
 
-// Memory cache of real players in the event to identify who is a real player vs a bot
-const REAL_PLAYERS: Record<string, string[]> = {};
+// Helper to get or create the Blob ID for an event PIN
+async function getEventBlobId(pin: string): Promise<string> {
+  const upperPin = pin.toUpperCase();
+  const registry = await getRegistry();
+  if (registry[upperPin]) {
+    return registry[upperPin];
+  }
+
+  // Create a new blank state blob on JSONBlob
+  const defaultState: GameState = {
+    activeGame: "lobby",
+    isStarted: false,
+    eventName: "Shubh Milan Sangeet",
+    maxPlayers: 100,
+    activeGames: ["housie", "eliminate", "boat", "hunt", "memory", "arrow", "escape"],
+    lobbyPlayers: [],
+    boatPositions: {},
+    housieClaimsQueue: [],
+    arrowFinishOrder: [],
+    escapeFinishOrder: [],
+    reportWinners: [],
+    huntSolves: [],
+    realPlayers: [], // Track real players persistently in the state!
+  };
+
+  try {
+    const res = await fetch("https://jsonblob.com/api/jsonBlob", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(defaultState),
+    });
+    if (res.ok) {
+      const blobId = res.headers.get("X-jsonblob-id") || res.headers.get("Location")?.split("/").pop() || "";
+      if (blobId) {
+        registry[upperPin] = blobId;
+        await saveRegistry(registry);
+        return blobId;
+      }
+    }
+  } catch (err) {
+    console.error("Error creating new event blob:", err);
+  }
+  return "";
+}
+
+// Load game state from its JSONBlob
+async function loadState(pin: string, blobId: string): Promise<GameState> {
+  const defaultState: GameState = {
+    activeGame: "lobby",
+    isStarted: false,
+    eventName: "Shubh Milan Sangeet",
+    maxPlayers: 100,
+    activeGames: ["housie", "eliminate", "boat", "hunt", "memory", "arrow", "escape"],
+    lobbyPlayers: [],
+    boatPositions: {},
+    housieClaimsQueue: [],
+    arrowFinishOrder: [],
+    escapeFinishOrder: [],
+    reportWinners: [],
+    huntSolves: [],
+    realPlayers: [],
+  };
+
+  if (!blobId) {
+    return localBackupStates[pin] || defaultState;
+  }
+
+  try {
+    const res = await fetch(`https://jsonblob.com/api/jsonBlob/${blobId}`, { 
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+      cache: "no-store" 
+    });
+    if (res.ok) {
+      const data = await res.json();
+      // Ensure realPlayers exists in the loaded object
+      if (!data.realPlayers) data.realPlayers = [];
+      localBackupStates[pin] = data;
+      return data;
+    }
+  } catch (err) {
+    console.error(`Error loading state for blob ${blobId}:`, err);
+  }
+  return localBackupStates[pin] || defaultState;
+}
+
+// Save game state back to its JSONBlob
+async function saveState(pin: string, blobId: string, state: GameState) {
+  localBackupStates[pin] = state;
+  if (!blobId) return;
+  try {
+    await fetch(`https://jsonblob.com/api/jsonBlob/${blobId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(state),
+    });
+  } catch (err) {
+    console.error(`Error saving state for blob ${blobId}:`, err);
+  }
+}
 
 interface GameState {
   activeGame: string;
@@ -61,46 +187,14 @@ interface GameState {
   escapePlayerStates?: any;
   escapeFinishOrder?: any[];
   reportWinners?: any[];
-}
-
-function loadState(pin: string): GameState {
-  const filePath = getFilePath(pin);
-  if (fs.existsSync(filePath)) {
-    try {
-      return JSON.parse(fs.readFileSync(filePath, "utf-8"));
-    } catch (err) {
-      console.error(`Error loading state for event ${pin}:`, err);
-    }
-  }
-  return {
-    activeGame: "lobby",
-    isStarted: false,
-    eventName: "Shubh Event",
-    maxPlayers: 100,
-    activeGames: ["housie", "eliminate", "boat", "hunt", "memory", "arrow", "escape"],
-    lobbyPlayers: [],
-    boatPositions: {},
-    housieClaimsQueue: [],
-    arrowFinishOrder: [],
-    escapeFinishOrder: [],
-    reportWinners: [],
-    huntSolves: [],
-  };
-}
-
-function saveState(pin: string, state: GameState) {
-  const filePath = getFilePath(pin);
-  try {
-    fs.writeFileSync(filePath, JSON.stringify(state, null, 2), "utf-8");
-  } catch (err) {
-    console.error(`Error saving state for event ${pin}:`, err);
-  }
+  realPlayers?: string[]; // Track real players persistently in the state!
 }
 
 export async function GET(request: Request, { params }: { params: Promise<{ pin: string }> }) {
   const { pin } = await params;
   const eventPin = pin.toUpperCase();
-  const state = loadState(eventPin);
+  const blobId = await getEventBlobId(eventPin);
+  const state = await loadState(eventPin, blobId);
   return NextResponse.json(state);
 }
 
@@ -110,13 +204,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ pin
   const body = await request.json();
 
   const { role, playerName, action, stateUpdate } = body;
-  const state = loadState(eventPin);
+  
+  const blobId = await getEventBlobId(eventPin);
+  const state = await loadState(eventPin, blobId);
 
   // Initialize Real Players list if not present
-  if (!REAL_PLAYERS[eventPin]) {
-    REAL_PLAYERS[eventPin] = [];
+  if (!state.realPlayers) {
+    state.realPlayers = [];
   }
-  const realPlayers = REAL_PLAYERS[eventPin];
+  const realPlayers = state.realPlayers;
 
   // Helper to ensure player exists in real players list
   const ensureRealPlayer = (name: string) => {
@@ -173,6 +269,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pin
 
     // Override merged properties
     state.lobbyPlayers = mergedLobbyPlayers;
+    state.realPlayers = realPlayers;
 
     // Preserve real players' boat positions
     if (state.boatPositions && stateUpdate.boatPositions) {
@@ -190,7 +287,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pin
     state.reportWinners = state.reportWinners || [];
     state.huntSolves = state.huntSolves || [];
 
-    saveState(eventPin, state);
+    await saveState(eventPin, blobId, state);
     return NextResponse.json(state);
   } else if (role === "player" && playerName) {
     // PLAYER ACTION OR HEARTBEAT
@@ -198,7 +295,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pin
 
     if (action === "join") {
       upsertLobbyPlayer(state, playerName, 0, "Ready", true);
-      saveState(eventPin, state);
+      await saveState(eventPin, blobId, state);
       return NextResponse.json(state);
     }
 
@@ -206,7 +303,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pin
       const nextPos = stateUpdate?.boatPositions?.[playerName] || 0;
       if (!state.boatPositions) state.boatPositions = {};
       state.boatPositions[playerName] = nextPos;
-      saveState(eventPin, state);
+      await saveState(eventPin, blobId, state);
       return NextResponse.json(state);
     }
 
@@ -219,7 +316,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pin
           return o;
         });
       }
-      saveState(eventPin, state);
+      await saveState(eventPin, blobId, state);
       return NextResponse.json(state);
     }
 
@@ -232,7 +329,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pin
       if (!alreadyClaimed) {
         state.housieClaimsQueue.push(claim);
       }
-      saveState(eventPin, state);
+      await saveState(eventPin, blobId, state);
       return NextResponse.json(state);
     }
 
@@ -253,7 +350,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pin
         });
       }
 
-      saveState(eventPin, state);
+      await saveState(eventPin, blobId, state);
       return NextResponse.json(state);
     }
 
@@ -274,7 +371,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pin
         prizeTag: `${medal} Escape Champion`,
       });
 
-      saveState(eventPin, state);
+      await saveState(eventPin, blobId, state);
       return NextResponse.json(state);
     }
 
@@ -295,7 +392,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pin
         prizeTag: `${medal} Maze Master`,
       });
 
-      saveState(eventPin, state);
+      await saveState(eventPin, blobId, state);
       return NextResponse.json(state);
     }
 
