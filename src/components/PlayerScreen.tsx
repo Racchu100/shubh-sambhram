@@ -277,6 +277,28 @@ export default function PlayerScreen({
     }
   }, [activeGame, playerJoined, housieTicket, onHousieTicketChange, onHousieMarkedCellsChange]);
 
+  const [autoMark, setAutoMark] = useState(true);
+
+  // Auto-mark drawn numbers
+  useEffect(() => {
+    if (autoMark && playerJoined && activeGame === "housie" && housieTicket && housieMarkedCells) {
+      let changed = false;
+      const updatedMarked = housieMarkedCells.map((row, r) =>
+        row.map((cell, c) => {
+          const val = housieTicket[r][c];
+          if (val !== 0 && !cell && housieDrawnNumbers.includes(val)) {
+            changed = true;
+            return true;
+          }
+          return cell;
+        })
+      );
+      if (changed) {
+        onHousieMarkedCellsChange(updatedMarked);
+      }
+    }
+  }, [housieDrawnNumbers, housieTicket, autoMark, playerJoined, activeGame, housieMarkedCells, onHousieMarkedCellsChange]);
+
   const handleHousieCellClick = (r: number, c: number, val: number) => {
     if (!housieMarkedCells) return;
     const isCurrentlyMarked = housieMarkedCells[r][c];
@@ -608,7 +630,12 @@ export default function PlayerScreen({
               }}
             >
               <span>Auto-mark drawn numbers:</span>
-              <input type="checkbox" defaultChecked style={{ width: "16px", height: "16px", accentColor: "var(--gold-primary)" }} />
+              <input
+                type="checkbox"
+                checked={autoMark}
+                onChange={(e) => setAutoMark(e.target.checked)}
+                style={{ width: "16px", height: "16px", accentColor: "var(--gold-primary)", cursor: "pointer" }}
+              />
             </div>
 
             {/* Claim patterns */}

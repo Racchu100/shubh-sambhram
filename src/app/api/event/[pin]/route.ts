@@ -236,6 +236,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ pin
 
   if (role === "admin") {
     // HOST SYNC
+    // Keep player-driven properties from the server's state BEFORE overwrite
+    const serverHousieClaimsQueue = state.housieClaimsQueue || [];
+    const serverArrowFinishOrder = state.arrowFinishOrder || [];
+    const serverEscapeFinishOrder = state.escapeFinishOrder || [];
+    const serverReportWinners = state.reportWinners || [];
+    const serverHuntSolves = state.huntSolves || [];
+    const serverBoatPositions = state.boatPositions || {};
+
     // Merge host's state updates, but preserve player-generated server state
     const currentLobbyPlayers = state.lobbyPlayers || [];
     const incomingLobbyPlayers = stateUpdate.lobbyPlayers || [];
@@ -270,22 +278,20 @@ export async function POST(request: Request, { params }: { params: Promise<{ pin
     // Override merged properties
     state.lobbyPlayers = mergedLobbyPlayers;
     state.realPlayers = realPlayers;
+    state.housieClaimsQueue = serverHousieClaimsQueue;
+    state.arrowFinishOrder = serverArrowFinishOrder;
+    state.escapeFinishOrder = serverEscapeFinishOrder;
+    state.reportWinners = serverReportWinners;
+    state.huntSolves = serverHuntSolves;
 
-    // Preserve real players' boat positions
-    if (state.boatPositions && stateUpdate.boatPositions) {
-      realPlayers.forEach((name) => {
-        if (state.boatPositions && state.boatPositions[name] !== undefined) {
-          state.boatPositions[name] = state.boatPositions[name];
-        }
-      });
-    }
-
-    // Preserve player-driven queues/arrays
-    state.housieClaimsQueue = state.housieClaimsQueue || [];
-    state.arrowFinishOrder = state.arrowFinishOrder || [];
-    state.escapeFinishOrder = state.escapeFinishOrder || [];
-    state.reportWinners = state.reportWinners || [];
-    state.huntSolves = state.huntSolves || [];
+    // Restore real players' boat positions
+    const boatPositions = state.boatPositions || {};
+    realPlayers.forEach((name) => {
+      if (serverBoatPositions[name] !== undefined) {
+        boatPositions[name] = serverBoatPositions[name];
+      }
+    });
+    state.boatPositions = boatPositions;
 
     await saveState(eventPin, blobId, state);
     return NextResponse.json(state);
