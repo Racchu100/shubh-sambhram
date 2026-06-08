@@ -175,7 +175,7 @@ export default function Sandbox({
   const [escapeFinishOrder, setEscapeFinishOrder] = useState<Array<{ player: string; time: number; rank: number }>>([]);
   const escapeTimerRef = useRef<NodeJS.Timeout | null>(null);
   const escapeBotTimersRef = useRef<NodeJS.Timeout[]>([]);
-  const processedClaimsRef = useRef<Array<{ player: string; pattern: string }>>([]);
+  const processedClaimsRef = useRef<string[]>([]);
   const syncFromServerRef = useRef<((data: any) => void) | null>(null);
   const prevDrawnNumbersLengthRef = useRef<number>(0);
 
@@ -225,9 +225,10 @@ export default function Sandbox({
       // Filter out claims that have already been processed (approved or rejected) on the host side
       const incomingClaims = data.housieClaimsQueue;
       if (incomingClaims !== undefined) {
-        const filteredClaims = incomingClaims.filter((c: any) =>
-          !processedClaimsRef.current.some((pc: any) => pc.player === c.player && pc.pattern === c.pattern)
-        );
+        const filteredClaims = incomingClaims.filter((c: any) => {
+          const cid = c.id || `${c.player}-${c.pattern}`;
+          return !processedClaimsRef.current.includes(cid);
+        });
         updateIfDiff(housieClaimsQueue, setHousieClaimsQueue, filteredClaims);
       }
 
@@ -578,8 +579,12 @@ export default function Sandbox({
     }));
   };
 
-  const handleHousieSubmitClaim = (claim: { player: string; pattern: string; ticket: number[][]; marked: boolean[][] }) => {
-    setHousieClaimsQueue((prev) => [...prev, claim]);
+  const handleHousieSubmitClaim = (claim: any) => {
+    const claimWithId = {
+      id: claim.id || `${claim.player}-${claim.pattern}-${Date.now()}`,
+      ...claim,
+    };
+    setHousieClaimsQueue((prev) => [...prev, claimWithId]);
 
     // Sync claim to API
     fetch(`/api/event/${initialEventPin}`, {
@@ -587,16 +592,18 @@ export default function Sandbox({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         role: "player",
-        playerName: claim.player,
+        playerName: claimWithId.player,
         action: "housie_claim",
-        stateUpdate: { claim }
+        stateUpdate: { claim: claimWithId }
       }),
     }).catch(console.error);
   };
 
-  const handleHousieVerifyClaim = (claimPlayer: string, claimPattern: string, approve: boolean) => {
-    const claim = housieClaimsQueue.find((c) => c.player === claimPlayer && c.pattern === claimPattern);
+  const handleHousieVerifyClaim = (claimId: string, approve: boolean) => {
+    const claim = housieClaimsQueue.find((c) => c.id === claimId);
     if (!claim) return;
+
+    const cid = claim.id || `${claim.player}-${claim.pattern}`;
 
     if (approve) {
       // Validate claim logic
@@ -687,12 +694,11 @@ export default function Sandbox({
         triggerPlayerBanner(`${claim.player} claimed ${claim.pattern}! 🏆`, "🎉", 4000);
 
         // Remove from local queue
-        setHousieClaimsQueue((prev) => prev.filter((c) => !(c.player === claimPlayer && c.pattern === claimPattern)));
+        setHousieClaimsQueue((prev) => prev.filter((c) => c.id !== claimId));
 
         // Sync approval to server
         if (role === "admin") {
-          const claimObj = { player: claim.player, pattern: claim.pattern };
-          processedClaimsRef.current.push(claimObj);
+          processedClaimsRef.current.push(cid);
 
           fetch(`/api/event/${initialEventPin}`, {
             method: "POST",
@@ -701,6 +707,7 @@ export default function Sandbox({
               role: "admin",
               action: "housie_verify_claim",
               stateUpdate: {
+                claimId: claim.id,
                 claimPlayer: claim.player,
                 claimPattern: claim.pattern,
                 approved: true,
@@ -720,16 +727,15 @@ export default function Sandbox({
         alert(`Claim verification failed! The pattern "${claim.pattern}" is not fully completed or contains undrawn numbers.`);
         
         // Auto-reject on failed validation
-        handleHousieVerifyClaim(claim.player, claim.pattern, false);
+        handleHousieVerifyClaim(claim.id, false);
       }
     } else {
       // Remove from local queue
-      setHousieClaimsQueue((prev) => prev.filter((c) => !(c.player === claimPlayer && c.pattern === claimPattern)));
+      setHousieClaimsQueue((prev) => prev.filter((c) => c.id !== claimId));
 
       // Sync rejection to server
       if (role === "admin") {
-        const claimObj = { player: claim.player, pattern: claim.pattern };
-        processedClaimsRef.current.push(claimObj);
+        processedClaimsRef.current.push(cid);
 
         fetch(`/api/event/${initialEventPin}`, {
           method: "POST",
@@ -738,6 +744,7 @@ export default function Sandbox({
             role: "admin",
             action: "housie_verify_claim",
             stateUpdate: {
+              claimId: claim.id,
               claimPlayer: claim.player,
               claimPattern: claim.pattern,
               approved: false,
@@ -758,7 +765,8 @@ export default function Sandbox({
 
   const handleHousieClearQueue = () => {
     housieClaimsQueue.forEach((claim) => {
-      processedClaimsRef.current.push({ player: claim.player, pattern: claim.pattern });
+      const cid = claim.id || `${claim.player}-${claim.pattern}`;
+      processedClaimsRef.current.push(cid);
     });
     setHousieClaimsQueue([]);
 

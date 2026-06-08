@@ -307,6 +307,7 @@ export default function PlayerScreen({
   const handleHousieClaimSubmit = (pattern: string) => {
     if (!housieTicket || !housieMarkedCells) return;
     onHousieSubmitClaim({
+      id: `${playerName}-${pattern}-${Date.now()}`,
       player: playerName,
       pattern,
       ticket: housieTicket,

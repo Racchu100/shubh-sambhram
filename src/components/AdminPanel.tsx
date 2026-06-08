@@ -23,7 +23,7 @@ interface AdminPanelProps {
   onHousieAutoToggle: (start: boolean) => void;
   onHousieReset: () => void;
   onHousiePatternToggle: (name: string, active: boolean) => void;
-  onHousieVerifyClaim: (claimPlayer: string, claimPattern: string, approve: boolean) => void;
+  onHousieVerifyClaim: (claimId: string, approve: boolean) => void;
   onHousieClearQueue?: () => void;
   onHousieSpeedChange: (speed: number) => void;
   // Eliminate
@@ -541,7 +541,7 @@ export default function AdminPanel({
                       ) : (
                         housieClaimsQueue.map((claim) => (
                           <div
-                            key={`${claim.player}-${claim.pattern}`}
+                            key={claim.id || `${claim.player}-${claim.pattern}`}
                             className="glass-panel"
                             style={{ padding: "10px", display: "flex", flexDirection: "column", gap: "8px", borderColor: "var(--gold-primary)" }}
                           >
@@ -554,10 +554,10 @@ export default function AdminPanel({
                               </span>
                             </div>
                             <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
-                              <button className="btn btn-outline" style={{ padding: "4px 8px", fontSize: "0.75rem" }} onClick={() => onHousieVerifyClaim(claim.player, claim.pattern, false)}>
+                              <button className="btn btn-outline" style={{ padding: "4px 8px", fontSize: "0.75rem" }} onClick={() => onHousieVerifyClaim(claim.id, false)}>
                                 Reject
                               </button>
-                              <button className="btn btn-primary" style={{ padding: "4px 8px", fontSize: "0.75rem" }} onClick={() => onHousieVerifyClaim(claim.player, claim.pattern, true)}>
+                              <button className="btn btn-primary" style={{ padding: "4px 8px", fontSize: "0.75rem" }} onClick={() => onHousieVerifyClaim(claim.id, true)}>
                                 Verify & Approve
                               </button>
                             </div>

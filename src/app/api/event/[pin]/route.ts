@@ -236,11 +236,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ pin
 
   if (role === "admin") {
     if (action === "housie_verify_claim") {
-      const { claimPlayer, claimPattern, approved } = stateUpdate;
+      const { claimId, claimPlayer, claimPattern, approved } = stateUpdate;
       if (state.housieClaimsQueue) {
-        state.housieClaimsQueue = state.housieClaimsQueue.filter(
-          (c: any) => !(c.player === claimPlayer && c.pattern === claimPattern)
-        );
+        state.housieClaimsQueue = state.housieClaimsQueue.filter((c: any) => {
+          if (claimId && c.id) return c.id !== claimId;
+          return !(c.player === claimPlayer && c.pattern === claimPattern);
+        });
       }
       if (approved) {
         if (!state.housiePatterns) state.housiePatterns = {};
@@ -274,9 +275,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ pin
     // Keep player-driven properties from the server's state BEFORE overwrite
     let serverHousieClaimsQueue = state.housieClaimsQueue || [];
     const housieProcessedClaims = stateUpdate.housieProcessedClaims || [];
-    serverHousieClaimsQueue = serverHousieClaimsQueue.filter((c: any) =>
-      !housieProcessedClaims.some((pc: any) => pc.player === c.player && pc.pattern === c.pattern)
-    );
+    serverHousieClaimsQueue = serverHousieClaimsQueue.filter((c: any) => {
+      const cid = c.id || `${c.player}-${c.pattern}`;
+      return !housieProcessedClaims.includes(cid);
+    });
     const serverArrowFinishOrder = state.arrowFinishOrder || [];
     const serverEscapeFinishOrder = state.escapeFinishOrder || [];
     const serverReportWinners = state.reportWinners || [];
