@@ -24,6 +24,7 @@ interface AdminPanelProps {
   onHousieReset: () => void;
   onHousiePatternToggle: (name: string, active: boolean) => void;
   onHousieVerifyClaim: (idx: number, approve: boolean) => void;
+  onHousieClearQueue?: () => void;
   onHousieSpeedChange: (speed: number) => void;
   // Eliminate
   eliminateRound: number | string;
@@ -115,6 +116,7 @@ export default function AdminPanel({
   onHousieReset,
   onHousiePatternToggle,
   onHousieVerifyClaim,
+  onHousieClearQueue,
   onHousieSpeedChange,
   // Eliminate
   eliminateRound,
@@ -521,7 +523,18 @@ export default function AdminPanel({
                   </div>
 
                   <div className="glass-panel" style={{ padding: "1.25rem", borderColor: "var(--magenta-primary)" }}>
-                    <h3 className="gradient-text-magenta">Claims Verification Queue</h3>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <h3 className="gradient-text-magenta" style={{ margin: 0 }}>Claims Verification Queue</h3>
+                      {housieClaimsQueue.length > 0 && (
+                        <button 
+                          className="btn btn-outline" 
+                          style={{ padding: "4px 10px", fontSize: "0.75rem", borderColor: "var(--danger)", color: "var(--danger)" }}
+                          onClick={onHousieClearQueue}
+                        >
+                          Clear Queue
+                        </button>
+                      )}
+                    </div>
                     <div style={{ marginTop: "10px", display: "flex", flexDirection: "column", gap: "10px" }}>
                       {housieClaimsQueue.length === 0 ? (
                         <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>No claims submitted yet.</p>

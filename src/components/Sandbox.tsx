@@ -88,6 +88,7 @@ export default function Sandbox({
   const [housieClaimsQueue, setHousieClaimsQueue] = useState<any[]>([]);
   const [housieTicket, setHousieTicket] = useState<number[][] | null>(null);
   const [housieMarkedCells, setHousieMarkedCells] = useState<boolean[][] | null>(null);
+  const [housieAutoMark, setHousieAutoMark] = useState(true);
   const autoDrawIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // --- GAME 2: ELIMINATE THE IMAGE STATE ---
@@ -174,6 +175,8 @@ export default function Sandbox({
   const [escapeFinishOrder, setEscapeFinishOrder] = useState<Array<{ player: string; time: number; rank: number }>>([]);
   const escapeTimerRef = useRef<NodeJS.Timeout | null>(null);
   const escapeBotTimersRef = useRef<NodeJS.Timeout[]>([]);
+  const processedClaimsRef = useRef<Array<{ player: string; pattern: string }>>([]);
+  const syncFromServerRef = useRef<((data: any) => void) | null>(null);
 
   // --- ANALYTICS / POST EVENT REPORT STATE ---
   const [reportWinners, setReportWinners] = useState<Array<{ gameName: string; winnerName: string; prizeTag: string }>>([]);
@@ -199,9 +202,30 @@ export default function Sandbox({
       updateIfDiff(playerBanner, setPlayerBanner, data.playerBanner);
       updateIfDiff(lobbyPlayers, setLobbyPlayers, data.lobbyPlayers);
       updateIfDiff(housieDrawnNumbers, setHousieDrawnNumbers, data.housieDrawnNumbers);
+ 
+      // Reset local ticket and marked cells when host resets game (server drawn numbers becomes empty)
+      if (
+        data.housieDrawnNumbers !== undefined &&
+        data.housieDrawnNumbers.length === 0
+      ) {
+        processedClaimsRef.current = [];
+        if (housieTicket !== null || housieMarkedCells !== null) {
+          setHousieTicket(null);
+          setHousieMarkedCells(null);
+        }
+      }
       updateIfDiff(housieLastDrawn, setHousieLastDrawn, data.housieLastDrawn);
       updateIfDiff(housiePatterns, setHousiePatterns, data.housiePatterns);
-      updateIfDiff(housieClaimsQueue, setHousieClaimsQueue, data.housieClaimsQueue);
+      
+      // Filter out claims that have already been processed (approved or rejected) on the host side
+      const incomingClaims = data.housieClaimsQueue;
+      if (incomingClaims !== undefined) {
+        const filteredClaims = incomingClaims.filter((c: any) =>
+          !processedClaimsRef.current.some((pc: any) => pc.player === c.player && pc.pattern === c.pattern)
+        );
+        updateIfDiff(housieClaimsQueue, setHousieClaimsQueue, filteredClaims);
+      }
+
       updateIfDiff(eliminateRound, setEliminateRound, data.eliminateRound);
       updateIfDiff(eliminateOptions, setEliminateOptions, data.eliminateOptions);
       updateIfDiff(eliminateIsFinished, setEliminateIsFinished, data.eliminateIsFinished);
@@ -246,6 +270,8 @@ export default function Sandbox({
       }
     };
 
+    syncFromServerRef.current = syncFromServer;
+
     // Host Outward Sync (Heartbeat POST every 1000ms)
     // Players Inward Sync (Polling GET every 1000ms)
     let syncInterval: NodeJS.Timeout;
@@ -265,7 +291,6 @@ export default function Sandbox({
             housieDrawnNumbers,
             housieLastDrawn,
             housiePatterns,
-            housieClaimsQueue,
             eliminateRound,
             eliminateOptions,
             eliminateIsFinished,
@@ -273,14 +298,12 @@ export default function Sandbox({
             eliminateIsTieBreaker,
             eliminateTieWinners,
             boatStatus,
-            boatPositions,
             boatResults,
             boatIsTieBreaker,
             boatTieWinners,
             huntCurrentClueIdx,
             huntHintsReleased,
             huntClues,
-            huntSolves,
             memoryGridSize,
             memoryTheme,
             memoryPairsMatched,
@@ -288,7 +311,6 @@ export default function Sandbox({
             arrowDifficulty,
             arrowStatus,
             arrowMaze,
-            arrowFinishOrder,
             arrowElapsedTime,
             arrowFormat,
             arrowPlayerStates,
@@ -298,8 +320,6 @@ export default function Sandbox({
             escapeElapsedTime,
             escapeFormat,
             escapePlayerStates,
-            escapeFinishOrder,
-            reportWinners,
           };
 
           const res = await fetch(`/api/event/${initialEventPin}`, {
@@ -346,6 +366,8 @@ export default function Sandbox({
     housieLastDrawn,
     housiePatterns,
     housieClaimsQueue,
+    housieTicket,
+    housieMarkedCells,
     eliminateRound,
     eliminateOptions,
     eliminateIsFinished,
@@ -506,6 +528,27 @@ export default function Sandbox({
     };
   }, [housieAutoDrawSpeed, housieIsAutoDrawing, housieTicket, housieMarkedCells]);
 
+  // Central auto-marking logic for player ticket cells
+  useEffect(() => {
+    if (housieAutoMark && housieTicket && housieMarkedCells) {
+      let changed = false;
+      const drawnSet = new Set(housieDrawnNumbers.map(Number));
+      const updatedMarked = housieMarkedCells.map((row, r) =>
+        row.map((cell, c) => {
+          const val = housieTicket[r][c];
+          if (val !== 0 && !cell && drawnSet.has(Number(val))) {
+            changed = true;
+            return true;
+          }
+          return cell;
+        })
+      );
+      if (changed) {
+        setHousieMarkedCells(updatedMarked);
+      }
+    }
+  }, [housieDrawnNumbers, housieTicket, housieAutoMark, housieMarkedCells]);
+
   const handleHousieReset = () => {
     handleHousieAutoToggle(false);
     setHousieDrawnNumbers([]);
@@ -635,12 +678,101 @@ export default function Sandbox({
         ]);
 
         triggerPlayerBanner(`${claim.player} claimed ${claim.pattern}! 🏆`, "🎉", 4000);
+
+        // Remove from local queue
+        setHousieClaimsQueue((prev) => prev.filter((_, i) => i !== idx));
+
+        // Sync approval to server
+        if (role === "admin") {
+          const claimObj = { player: claim.player, pattern: claim.pattern };
+          processedClaimsRef.current.push(claimObj);
+
+          fetch(`/api/event/${initialEventPin}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              role: "admin",
+              action: "housie_verify_claim",
+              stateUpdate: {
+                claimPlayer: claim.player,
+                claimPattern: claim.pattern,
+                approved: true,
+              },
+            }),
+          })
+          .then((res) => {
+            if (!res.ok) throw new Error("Approval fetch failed");
+            return res.json();
+          })
+          .then((data) => {
+            syncFromServerRef.current?.(data);
+          })
+          .catch(console.error);
+        }
       } else {
         alert(`Claim verification failed! The pattern "${claim.pattern}" is not fully completed or contains undrawn numbers.`);
+        
+        // Auto-reject on failed validation
+        handleHousieVerifyClaim(idx, false);
+      }
+    } else {
+      // Remove from local queue
+      setHousieClaimsQueue((prev) => prev.filter((_, i) => i !== idx));
+
+      // Sync rejection to server
+      if (role === "admin") {
+        const claimObj = { player: claim.player, pattern: claim.pattern };
+        processedClaimsRef.current.push(claimObj);
+
+        fetch(`/api/event/${initialEventPin}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            role: "admin",
+            action: "housie_verify_claim",
+            stateUpdate: {
+              claimPlayer: claim.player,
+              claimPattern: claim.pattern,
+              approved: false,
+            },
+          }),
+        })
+        .then((res) => {
+          if (!res.ok) throw new Error("Rejection fetch failed");
+          return res.json();
+        })
+        .then((data) => {
+          syncFromServerRef.current?.(data);
+        })
+        .catch(console.error);
       }
     }
+  };
 
-    setHousieClaimsQueue((prev) => prev.filter((_, i) => i !== idx));
+  const handleHousieClearQueue = () => {
+    housieClaimsQueue.forEach((claim) => {
+      processedClaimsRef.current.push({ player: claim.player, pattern: claim.pattern });
+    });
+    setHousieClaimsQueue([]);
+
+    if (role === "admin") {
+      fetch(`/api/event/${initialEventPin}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          role: "admin",
+          action: "housie_clear_queue"
+        }),
+      })
+      .then((res) => {
+        if (!res.ok) throw new Error("Clear queue failed");
+        return res.json();
+      })
+      .then((data) => {
+        syncFromServerRef.current?.(data);
+      })
+      .catch(console.error);
+    }
   };
 
   // --- GAME 2: ELIMINATE THE IMAGE LOGIC ---
@@ -1696,6 +1828,7 @@ export default function Sandbox({
               onHousieReset={handleHousieReset}
               onHousiePatternToggle={handleHousiePatternToggle}
               onHousieVerifyClaim={handleHousieVerifyClaim}
+              onHousieClearQueue={handleHousieClearQueue}
               onHousieSpeedChange={setHousieAutoDrawSpeed}
               // Eliminate
               eliminateRound={eliminateRound}
@@ -1798,6 +1931,8 @@ export default function Sandbox({
               onHousieSubmitClaim={handleHousieSubmitClaim}
               onHousieDrawLog={housieDrawnNumbers.slice(-5).reverse()}
               onTriggerBanner={triggerPlayerBanner}
+              housieAutoMark={housieAutoMark}
+              onHousieAutoMarkChange={setHousieAutoMark}
               // Eliminate
               eliminateRound={eliminateRound}
               eliminateOptions={eliminateOptions}
@@ -1910,6 +2045,7 @@ export default function Sandbox({
             onHousieReset={handleHousieReset}
             onHousiePatternToggle={handleHousiePatternToggle}
             onHousieVerifyClaim={handleHousieVerifyClaim}
+            onHousieClearQueue={handleHousieClearQueue}
             onHousieSpeedChange={setHousieAutoDrawSpeed}
             // Eliminate
             eliminateRound={eliminateRound}
@@ -2005,6 +2141,8 @@ export default function Sandbox({
             onHousieSubmitClaim={handleHousieSubmitClaim}
             onHousieDrawLog={housieDrawnNumbers.slice(-5).reverse()}
             onTriggerBanner={triggerPlayerBanner}
+            housieAutoMark={housieAutoMark}
+            onHousieAutoMarkChange={setHousieAutoMark}
             // Eliminate
             eliminateRound={eliminateRound}
             eliminateOptions={eliminateOptions}

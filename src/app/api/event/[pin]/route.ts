@@ -235,6 +235,41 @@ export async function POST(request: Request, { params }: { params: Promise<{ pin
   };
 
   if (role === "admin") {
+    if (action === "housie_verify_claim") {
+      const { claimPlayer, claimPattern, approved } = stateUpdate;
+      if (state.housieClaimsQueue) {
+        state.housieClaimsQueue = state.housieClaimsQueue.filter(
+          (c: any) => !(c.player === claimPlayer && c.pattern === claimPattern)
+        );
+      }
+      if (approved) {
+        if (!state.housiePatterns) state.housiePatterns = {};
+        state.housiePatterns[claimPattern] = {
+          active: state.housiePatterns[claimPattern]?.active ?? true,
+          winner: claimPlayer,
+        };
+        if (!state.lobbyPlayers) state.lobbyPlayers = [];
+        const idx = state.lobbyPlayers.findIndex((p: any) => p.name === claimPlayer);
+        if (idx >= 0) {
+          state.lobbyPlayers[idx].points = (state.lobbyPlayers[idx].points || 0) + 100;
+        }
+        if (!state.reportWinners) state.reportWinners = [];
+        state.reportWinners.push({
+          gameName: "Housie — " + claimPattern,
+          winnerName: claimPlayer,
+          prizeTag: "🥇 Pattern Winner",
+        });
+      }
+      await saveState(eventPin, blobId, state);
+      return NextResponse.json(state);
+    }
+
+    if (action === "housie_clear_queue") {
+      state.housieClaimsQueue = [];
+      await saveState(eventPin, blobId, state);
+      return NextResponse.json(state);
+    }
+
     // HOST SYNC
     // Keep player-driven properties from the server's state BEFORE overwrite
     const serverHousieClaimsQueue = state.housieClaimsQueue || [];

@@ -28,6 +28,8 @@ interface PlayerScreenProps {
   onHousieSubmitClaim: (claim: any) => void;
   onHousieDrawLog: number[];
   onTriggerBanner: (text: string, icon?: string, duration?: number) => void;
+  housieAutoMark: boolean;
+  onHousieAutoMarkChange: (val: boolean) => void;
   // Eliminate
   eliminateRound: number | string;
   eliminateOptions: any[];
@@ -106,6 +108,8 @@ export default function PlayerScreen({
   onHousieSubmitClaim,
   onHousieDrawLog,
   onTriggerBanner,
+  housieAutoMark,
+  onHousieAutoMarkChange,
   // Eliminate
   eliminateRound,
   eliminateOptions,
@@ -277,27 +281,7 @@ export default function PlayerScreen({
     }
   }, [activeGame, playerJoined, housieTicket, onHousieTicketChange, onHousieMarkedCellsChange]);
 
-  const [autoMark, setAutoMark] = useState(true);
 
-  // Auto-mark drawn numbers
-  useEffect(() => {
-    if (autoMark && playerJoined && activeGame === "housie" && housieTicket && housieMarkedCells) {
-      let changed = false;
-      const updatedMarked = housieMarkedCells.map((row, r) =>
-        row.map((cell, c) => {
-          const val = housieTicket[r][c];
-          if (val !== 0 && !cell && housieDrawnNumbers.includes(val)) {
-            changed = true;
-            return true;
-          }
-          return cell;
-        })
-      );
-      if (changed) {
-        onHousieMarkedCellsChange(updatedMarked);
-      }
-    }
-  }, [housieDrawnNumbers, housieTicket, autoMark, playerJoined, activeGame, housieMarkedCells, onHousieMarkedCellsChange]);
 
   const handleHousieCellClick = (r: number, c: number, val: number) => {
     if (!housieMarkedCells) return;
@@ -308,7 +292,8 @@ export default function PlayerScreen({
       );
       onHousieMarkedCellsChange(updated);
     } else {
-      if (housieDrawnNumbers.includes(val)) {
+      const drawnSet = new Set(housieDrawnNumbers.map(Number));
+      if (drawnSet.has(Number(val))) {
         const updated = housieMarkedCells.map((row, rIdx) =>
           row.map((cell, cIdx) => (rIdx === r && cIdx === c ? true : cell))
         );
@@ -568,6 +553,7 @@ export default function PlayerScreen({
               </span>
             </div>
 
+
             {/* Approved Claims Status Strip */}
             {Object.entries(housiePatterns).some(([_, v]) => v.winner) && (
               <div className="glass-panel" style={{ padding: "6px 10px", width: "100%", borderColor: "var(--gold-primary)", display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap", fontSize: "0.75rem", marginBottom: "5px", animation: "fadeIn 0.3s" }}>
@@ -616,26 +602,45 @@ export default function PlayerScreen({
                 ))}
             </div>
 
-            {/* Auto Mark Checkbox */}
+            {/* Auto Mark Toggle */}
             <div
               className="glass-panel"
               style={{
-                padding: "8px 12px",
+                padding: "10px 14px",
                 width: "100%",
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
-                fontSize: "0.8rem",
-                marginBottom: "5px",
+                fontSize: "0.85rem",
+                marginBottom: "8px",
+                border: "1px solid rgba(255, 215, 0, 0.2)",
               }}
             >
               <span>Auto-mark drawn numbers:</span>
-              <input
-                type="checkbox"
-                checked={autoMark}
-                onChange={(e) => setAutoMark(e.target.checked)}
-                style={{ width: "16px", height: "16px", accentColor: "var(--gold-primary)", cursor: "pointer" }}
-              />
+              <div 
+                onClick={() => onHousieAutoMarkChange(!housieAutoMark)}
+                style={{
+                  width: "44px",
+                  height: "24px",
+                  borderRadius: "12px",
+                  background: housieAutoMark ? "var(--gold-gradient)" : "rgba(255,255,255,0.1)",
+                  padding: "2px",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: housieAutoMark ? "flex-end" : "flex-start",
+                  transition: "all 0.3s ease",
+                  boxShadow: housieAutoMark ? "var(--gold-glow)" : "none",
+                }}
+              >
+                <div style={{
+                  width: "20px",
+                  height: "20px",
+                  borderRadius: "50%",
+                  background: housieAutoMark ? "#120924" : "#9CA3AF",
+                  transition: "all 0.3s ease",
+                }} />
+              </div>
             </div>
 
             {/* Claim patterns */}
