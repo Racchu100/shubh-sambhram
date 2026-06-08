@@ -592,8 +592,8 @@ export default function Sandbox({
     }).catch(console.error);
   };
 
-  const handleHousieVerifyClaim = (idx: number, approve: boolean) => {
-    const claim = housieClaimsQueue[idx];
+  const handleHousieVerifyClaim = (claimPlayer: string, claimPattern: string, approve: boolean) => {
+    const claim = housieClaimsQueue.find((c) => c.player === claimPlayer && c.pattern === claimPattern);
     if (!claim) return;
 
     if (approve) {
@@ -685,7 +685,7 @@ export default function Sandbox({
         triggerPlayerBanner(`${claim.player} claimed ${claim.pattern}! 🏆`, "🎉", 4000);
 
         // Remove from local queue
-        setHousieClaimsQueue((prev) => prev.filter((_, i) => i !== idx));
+        setHousieClaimsQueue((prev) => prev.filter((c) => !(c.player === claimPlayer && c.pattern === claimPattern)));
 
         // Sync approval to server
         if (role === "admin") {
@@ -718,11 +718,11 @@ export default function Sandbox({
         alert(`Claim verification failed! The pattern "${claim.pattern}" is not fully completed or contains undrawn numbers.`);
         
         // Auto-reject on failed validation
-        handleHousieVerifyClaim(idx, false);
+        handleHousieVerifyClaim(claim.player, claim.pattern, false);
       }
     } else {
       // Remove from local queue
-      setHousieClaimsQueue((prev) => prev.filter((_, i) => i !== idx));
+      setHousieClaimsQueue((prev) => prev.filter((c) => !(c.player === claimPlayer && c.pattern === claimPattern)));
 
       // Sync rejection to server
       if (role === "admin") {
