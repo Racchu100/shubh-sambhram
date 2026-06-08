@@ -177,6 +177,7 @@ export default function Sandbox({
   const escapeBotTimersRef = useRef<NodeJS.Timeout[]>([]);
   const processedClaimsRef = useRef<Array<{ player: string; pattern: string }>>([]);
   const syncFromServerRef = useRef<((data: any) => void) | null>(null);
+  const prevDrawnNumbersLengthRef = useRef<number>(0);
 
   // --- ANALYTICS / POST EVENT REPORT STATE ---
   const [reportWinners, setReportWinners] = useState<Array<{ gameName: string; winnerName: string; prizeTag: string }>>([]);
@@ -203,16 +204,20 @@ export default function Sandbox({
       updateIfDiff(lobbyPlayers, setLobbyPlayers, data.lobbyPlayers);
       updateIfDiff(housieDrawnNumbers, setHousieDrawnNumbers, data.housieDrawnNumbers);
  
-      // Reset local ticket and marked cells when host resets game (server drawn numbers becomes empty)
+      // Reset local ticket and marked cells when host resets game (server drawn numbers goes from non-empty to empty)
       if (
         data.housieDrawnNumbers !== undefined &&
         data.housieDrawnNumbers.length === 0
       ) {
         processedClaimsRef.current = [];
-        if (housieTicket !== null || housieMarkedCells !== null) {
+        if (prevDrawnNumbersLengthRef.current > 0 && (housieTicket !== null || housieMarkedCells !== null)) {
           setHousieTicket(null);
           setHousieMarkedCells(null);
         }
+      }
+      
+      if (data.housieDrawnNumbers !== undefined) {
+        prevDrawnNumbersLengthRef.current = data.housieDrawnNumbers.length;
       }
       updateIfDiff(housieLastDrawn, setHousieLastDrawn, data.housieLastDrawn);
       updateIfDiff(housiePatterns, setHousiePatterns, data.housiePatterns);
