@@ -238,6 +238,7 @@ export default function Sandbox({
       updateIfDiff(eliminateWinner, setEliminateWinner, data.eliminateWinner);
       updateIfDiff(eliminateIsTieBreaker, setEliminateIsTieBreaker, data.eliminateIsTieBreaker);
       updateIfDiff(eliminateTieWinners, setEliminateTieWinners, data.eliminateTieWinners);
+      updateIfDiff(eliminateSurvivors, setEliminateSurvivors, data.eliminateSurvivors);
       updateIfDiff(boatStatus, setBoatStatus, data.boatStatus);
       updateIfDiff(boatPositions, setBoatPositions, data.boatPositions);
       updateIfDiff(boatResults, setBoatResults, data.boatResults);
@@ -303,6 +304,7 @@ export default function Sandbox({
             eliminateWinner,
             eliminateIsTieBreaker,
             eliminateTieWinners,
+            eliminateSurvivors,
             boatStatus,
             boatResults,
             boatIsTieBreaker,
@@ -381,6 +383,7 @@ export default function Sandbox({
     eliminateWinner,
     eliminateIsTieBreaker,
     eliminateTieWinners,
+    eliminateSurvivors,
     boatStatus,
     boatPositions,
     boatResults,

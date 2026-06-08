@@ -714,33 +714,47 @@ export default function PlayerScreen({
             </p>
 
             <div className="player-images-container">
-              {eliminateOptions.map((o) => {
-                const isWinner = eliminateIsFinished && !o.eliminated;
-                const isSpectatingTieBreaker = eliminateIsTieBreaker && !eliminateTieWinners.includes(playerName);
+              {(() => {
                 const isEliminated = eliminateSurvivors.length > 0 && !eliminateSurvivors.includes(playerName);
-                const canVote = !o.eliminated && !eliminateIsFinished && !isSpectatingTieBreaker && !isEliminated;
-
-                let cardClass = "player-image-card";
-                if (o.eliminated) cardClass += " eliminated";
-                else if (eliminatePlayerVote === o.id) cardClass += " voted";
-                else if (isWinner) cardClass += " winner-card";
-
                 return (
-                  <div key={o.id} className={cardClass} onClick={() => canVote && onEliminateVote(o.id)}>
-                    <div className="placeholder-visual">{o.label.split(" ")[0]}</div>
-                    <div style={{ fontSize: "0.8rem", padding: "6px", textAlign: "center", background: "rgba(0,0,0,0.3)" }}>
-                      {o.label.split(" ")[1]}
-                    </div>
-                  </div>
+                  <>
+                    {eliminateOptions.map((o) => {
+                      const isWinner = eliminateIsFinished && !o.eliminated;
+                      const isSpectatingTieBreaker = eliminateIsTieBreaker && !eliminateTieWinners.includes(playerName);
+                      const canVote = !o.eliminated && !eliminateIsFinished && !isSpectatingTieBreaker && !isEliminated;
+
+                      let cardClass = "player-image-card";
+                      if (o.eliminated) cardClass += " eliminated";
+                      else if (eliminatePlayerVote === o.id) cardClass += " voted";
+                      else if (isWinner) cardClass += " winner-card";
+
+                      return (
+                        <div key={o.id} className={cardClass} onClick={() => canVote && onEliminateVote(o.id)}>
+                          <div className="placeholder-visual">{o.label.split(" ")[0]}</div>
+                          <div style={{ fontSize: "0.8rem", padding: "6px", textAlign: "center", background: "rgba(0,0,0,0.3)" }}>
+                            {o.label.split(" ")[1]}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </>
                 );
-              })}
+              })()}
             </div>
 
             <div className="glass-panel" style={{ padding: "10px", width: "100%", fontSize: "0.8rem", marginTop: "15px" }}>
               <span>
-                {eliminateIsTieBreaker && !eliminateTieWinners.includes(playerName)
-                  ? "👁️ Spectating Sudden-Death Tie-Breaker..."
-                  : eliminateFeedback}
+                {(() => {
+                  const isSpectatingTieBreaker = eliminateIsTieBreaker && !eliminateTieWinners.includes(playerName);
+                  const isEliminated = eliminateSurvivors.length > 0 && !eliminateSurvivors.includes(playerName);
+                  if (isSpectatingTieBreaker) {
+                    return "👁️ Spectating Sudden-Death Tie-Breaker...";
+                  }
+                  if (isEliminated) {
+                    return "💀 Knocked Out! You backed the eliminated image.";
+                  }
+                  return eliminateFeedback;
+                })()}
               </span>
             </div>
           </div>

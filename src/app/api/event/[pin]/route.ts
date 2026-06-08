@@ -159,6 +159,7 @@ interface GameState {
   eliminateWinner?: string | null;
   eliminateIsTieBreaker?: boolean;
   eliminateTieWinners?: string[];
+  eliminateSurvivors?: string[];
   boatStatus?: string;
   boatPositions?: Record<string, number>;
   boatResults?: string[];
