@@ -1,9 +1,15 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useRef } from "react";
+import Image from "next/image";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Link from "next/link";
+
+// Helper: map old jpg path → webp path
+function toWebP(path: string): string {
+  return path.replace(/\.(jpg|jpeg|png)$/i, ".webp");
+}
 
 export default function EventsPortfolioPage() {
   const categories = [
@@ -11,10 +17,10 @@ export default function EventsPortfolioPage() {
       id: "weddings",
       title: "💍 Luxury Weddings & Pre-Weddings",
       desc: "We transform halls, open gardens, and temple venues into royal celebration spaces. Our services include flower-wrapped entrance arches, structural mandaps, traditional seating, and LED backdrop integration.",
-      image: "/beautiful-wedding-flowers-low-angle.jpg",
+      image: "/beautiful-wedding-flowers-low-angle.webp",
       subImages: [
-        { url: "/golden-wedding-stage-photo.jpg", label: "Grand Stage Layouts" },
-        { url: "/wedding-arch-with-flowers-sunset-view.jpg", label: "Sunrise/Sunset Arches" }
+        { url: "/golden-wedding-stage-photo.webp", label: "Grand Stage Layouts" },
+        { url: "/wedding-arch-with-flowers-sunset-view.webp", label: "Sunrise/Sunset Arches" }
       ],
       features: [
         "Fresh and imported floral curation",
@@ -27,10 +33,10 @@ export default function EventsPortfolioPage() {
       id: "proposals",
       title: "💖 Surprise Proposals & Romantic Dates",
       desc: "Make your magical proposal unforgettable with customized styling. From private rooftop candlelit dinners to garden photobooths, we coordinate the visual romance down to the last rose petal.",
-      image: "/romantic-wedding-photocall-with-neon-love-sign.jpg",
+      image: "/romantic-wedding-photocall-with-neon-love-sign.webp",
       subImages: [
-        { url: "/“Forever started with one word_ Yes 💍❤️”__#heartflower #proposal #proposalideas #engaged #eventrentals #proposal #shesaidyes💍.jpg", label: "Proposal Flower Decor" },
-        { url: "/Anais-Events-6.jpg", label: "Private Romantic Dinners" }
+        { url: "/Anais-Events-6.webp", label: "Proposal Flower Decor" },
+        { url: "/Anais-Events-6.webp", label: "Private Romantic Dinners" }
       ],
       features: [
         "Custom neon signboards ('Marry Me', 'Forever & Always')",
@@ -43,10 +49,10 @@ export default function EventsPortfolioPage() {
       id: "birthdays",
       title: "🎂 Birthday & Anniversary Parties",
       desc: "Bring energy and color to your family milestone celebrations! We design high-energy setups with premium balloon arches, themed character backdrops, cake presentation stages, and interactive game mockups.",
-      image: "/shine-wedding-altar-newlyweds-stands-backyard-decorated-with-balloons.jpg",
+      image: "/shine-wedding-altar-newlyweds-stands-backyard-decorated-with-balloons.webp",
       subImages: [
-        { url: "/Celebrations25 #WeddingWire2026 home decorated.jpg", label: "Home Balloon Styling" },
-        { url: "/navratri-highly-detailed-door-decoration.jpg", label: "Traditional Door Decors" }
+        { url: "/navratri-highly-detailed-door-decoration.webp", label: "Home Balloon Styling" },
+        { url: "/navratri-highly-detailed-door-decoration.webp", label: "Traditional Door Decors" }
       ],
       features: [
         "Chic balloon arches and backdrops",
@@ -59,10 +65,10 @@ export default function EventsPortfolioPage() {
       id: "corporate",
       title: "🏢 Corporate Galas & Conferences",
       desc: "For premium corporate styling that stands out. We handle stage layouts, banner designs, corporate banquet dinners, lighting, and client engagement areas with professional excellence.",
-      image: "/elegant-wedding-ceremony-table-with-floral-candle-decor.jpg",
+      image: "/elegant-wedding-ceremony-table-with-floral-candle-decor.webp",
       subImages: [
-        { url: "/Anais-Events-6.jpg", label: "Banquet Settings" },
-        { url: "/beautiful-wedding-flowers-low-angle.jpg", label: "Corporate Entrance Curation" }
+        { url: "/Anais-Events-6.webp", label: "Banquet Settings" },
+        { url: "/beautiful-wedding-flowers-low-angle.webp", label: "Corporate Entrance Curation" }
       ],
       features: [
         "Elegant banquet table layouts",
@@ -73,12 +79,61 @@ export default function EventsPortfolioPage() {
     }
   ];
 
+  // Lazy-load videos using IntersectionObserver
+  const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const video = entry.target as HTMLVideoElement;
+          if (entry.isIntersecting) {
+            // Only set src when video enters viewport
+            const dataSrc = video.getAttribute("data-src");
+            if (dataSrc && !video.src) {
+              video.src = dataSrc;
+              video.load();
+            }
+            observer.unobserve(video);
+          }
+        });
+      },
+      { rootMargin: "200px" } // start loading 200px before visible
+    );
+
+    videoRefs.current.forEach((v) => { if (v) observer.observe(v); });
+    return () => observer.disconnect();
+  }, []);
+
+  const videos = [
+    {
+      src: "/From KlickPin CF Amazing Date Night Outfit Ideas for a Cozy Vibe - Pin-809944314258527187.mp4",
+      title: "💖 Romantic Proposal Highlights",
+      desc: "Private outdoor proposal setup with custom neon signs and rose arches.",
+    },
+    {
+      src: "/From KlickPin CF Charming world culture moments with charm and ideas for creative people with beautiful world vibes 🌏 - Pin-907545762406783443.mp4",
+      title: "🌏 Traditional Theme Walkthrough",
+      desc: "Elegant cultural celebration decor and traditional entry backdrops.",
+    },
+    {
+      src: "/From KlickPin CF Practical Digital Detox Ideas for a Cozy Vibe - Pin-836684437044236034.mp4",
+      title: "🍽️ Cozy Date & Dinner Setup",
+      desc: "Chic banquet tables styled with warm candle lanterns and premium centerpieces.",
+    },
+    {
+      src: "/From KlickPin CF Practical Resin Craft Ideas for Right Now - Pin-870531802963938104.mp4",
+      title: "✨ Creative Event Artistry",
+      desc: "Close-up details of customized structural props and floral crafts.",
+    },
+  ];
+
   return (
     <div className="luxury-light">
       <Header />
 
       <main className="luxury-container" style={{ paddingBottom: "4rem" }}>
-        
+
         {/* Intro */}
         <section style={{ textAlign: "center", marginBottom: "4rem" }}>
           <span className="hero-badge" style={{ marginBottom: "12px" }}>Our Portfolio</span>
@@ -103,34 +158,35 @@ export default function EventsPortfolioPage() {
                 padding: "2.5rem",
                 borderRadius: "24px",
                 alignItems: "center",
+                contentVisibility: "auto",
+                containIntrinsicSize: "0 600px",
               }}
             >
               {/* Image side */}
               <div style={{ order: idx % 2 === 0 ? 0 : 1 }}>
-                <div
-                  style={{
-                    height: "360px",
-                    backgroundImage: `url('${cat.image}')`,
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
-                    borderRadius: "16px",
-                    boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
-                    marginBottom: "16px"
-                  }}
-                />
-                
+                <div style={{ position: "relative", height: "360px", borderRadius: "16px", overflow: "hidden", boxShadow: "0 10px 25px rgba(0,0,0,0.1)", marginBottom: "16px" }}>
+                  <Image
+                    src={cat.image}
+                    alt={cat.title}
+                    fill
+                    style={{ objectFit: "cover" }}
+                    loading={idx === 0 ? "eager" : "lazy"}
+                    priority={idx === 0}
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                  />
+                </div>
+
                 {/* Thumbnails */}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                   {cat.subImages.map((sub, sIdx) => (
-                    <div key={sIdx} style={{ position: "relative" }}>
-                      <div
-                        style={{
-                          height: "110px",
-                          backgroundImage: `url('${sub.url}')`,
-                          backgroundSize: "cover",
-                          backgroundPosition: "center",
-                          borderRadius: "10px",
-                        }}
+                    <div key={sIdx} style={{ position: "relative", height: "110px", borderRadius: "10px", overflow: "hidden" }}>
+                      <Image
+                        src={sub.url}
+                        alt={sub.label}
+                        fill
+                        style={{ objectFit: "cover" }}
+                        loading="lazy"
+                        sizes="(max-width: 768px) 50vw, 25vw"
                       />
                       <span
                         style={{
@@ -141,7 +197,8 @@ export default function EventsPortfolioPage() {
                           background: "rgba(0,0,0,0.6)",
                           color: "white",
                           padding: "2px 6px",
-                          borderRadius: "4px"
+                          borderRadius: "4px",
+                          zIndex: 1,
                         }}
                       >
                         {sub.label}
@@ -181,7 +238,7 @@ export default function EventsPortfolioPage() {
           ))}
         </section>
 
-        {/* VIDEO HIGHLIGHTS REEL */}
+        {/* VIDEO HIGHLIGHTS REEL — lazy loaded via IntersectionObserver */}
         <section style={{ marginTop: "4rem" }}>
           <div style={{ textAlign: "center", marginBottom: "2.5rem" }}>
             <span className="hero-badge" style={{ marginBottom: "12px" }}>Event Reels</span>
@@ -194,57 +251,23 @@ export default function EventsPortfolioPage() {
           </div>
 
           <div className="video-reels-grid">
-            <div className="video-card-item glass-panel">
-              <video
-                src="/From KlickPin CF Amazing Date Night Outfit Ideas for a Cozy Vibe - Pin-809944314258527187.mp4"
-                controls
-                preload="metadata"
-                className="portfolio-video"
-              />
-              <div className="video-card-info">
-                <h3>💖 Romantic Proposal Highlights</h3>
-                <p>Private outdoor proposal setup with custom neon signs and rose arches.</p>
+            {videos.map((v, i) => (
+              <div key={i} className="video-card-item glass-panel">
+                {/* data-src used by IntersectionObserver — video not loaded until visible */}
+                <video
+                  ref={(el) => { videoRefs.current[i] = el; }}
+                  data-src={v.src}
+                  controls
+                  preload="none"
+                  className="portfolio-video"
+                  playsInline
+                />
+                <div className="video-card-info">
+                  <h3>{v.title}</h3>
+                  <p>{v.desc}</p>
+                </div>
               </div>
-            </div>
-
-            <div className="video-card-item glass-panel">
-              <video
-                src="/From KlickPin CF Charming world culture moments with charm and ideas for creative people with beautiful world vibes 🌏 - Pin-907545762406783443.mp4"
-                controls
-                preload="metadata"
-                className="portfolio-video"
-              />
-              <div className="video-card-info">
-                <h3>🌏 Traditional Theme Walkthrough</h3>
-                <p>Elegant cultural celebration decor and traditional entry backdrops.</p>
-              </div>
-            </div>
-
-            <div className="video-card-item glass-panel">
-              <video
-                src="/From KlickPin CF Practical Digital Detox Ideas for a Cozy Vibe - Pin-836684437044236034.mp4"
-                controls
-                preload="metadata"
-                className="portfolio-video"
-              />
-              <div className="video-card-info">
-                <h3>🍽️ Cozy Date & Dinner Setup</h3>
-                <p>Chic banquet tables styled with warm candle lanterns and premium centerpieces.</p>
-              </div>
-            </div>
-
-            <div className="video-card-item glass-panel">
-              <video
-                src="/From KlickPin CF Practical Resin Craft Ideas for Right Now - Pin-870531802963938104.mp4"
-                controls
-                preload="metadata"
-                className="portfolio-video"
-              />
-              <div className="video-card-info">
-                <h3>✨ Creative Event Artistry</h3>
-                <p>Close-up details of customized structural props and floral crafts.</p>
-              </div>
-            </div>
+            ))}
           </div>
         </section>
 
@@ -252,7 +275,7 @@ export default function EventsPortfolioPage() {
 
       <Footer />
 
-      {/* Responsive columns override inside JSX */}
+      {/* Responsive columns override */}
       <style jsx>{`
         @media (max-width: 992px) {
           .glass-panel {

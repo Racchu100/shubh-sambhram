@@ -1,10 +1,21 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
+import Image from "next/image";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import Sandbox from "@/components/Sandbox";
 import Link from "next/link";
+
+// Dynamically import heavy Sandbox — only loads JS when demo is triggered
+const Sandbox = dynamic(() => import("@/components/Sandbox"), {
+  loading: () => (
+    <div style={{ minHeight: "400px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div className="lobby-loader" />
+    </div>
+  ),
+  ssr: false,
+});
 
 export default function Home() {
   const [showDemo, setShowDemo] = useState(false);
@@ -13,17 +24,17 @@ export default function Home() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const slides = [
     {
-      image: "/beautiful-wedding-flowers-low-angle.jpg",
+      image: "/beautiful-wedding-flowers-low-angle.webp",
       title: "Luxury Wedding Decors",
       desc: "Bespoke design, premium stage arches, and romantic backdrops customized for your Shubh Occasions."
     },
     {
-      image: "/wedding-arch-with-flowers-sunset-view.jpg",
+      image: "/wedding-arch-with-flowers-sunset-view.webp",
       title: "Surprise Proposal Setups",
       desc: "Intimate beachside dinners, neon 'Marry Me' signs, and floral arrangements to capture the perfect 'Yes'."
     },
     {
-      image: "/elegant-wedding-ceremony-table-with-floral-candle-decor.jpg",
+      image: "/elegant-wedding-ceremony-table-with-floral-candle-decor.webp",
       title: "High-End Corporate Events",
       desc: "Impeccable table designs, custom lighting, and interactive game features to elevate your business galas."
     }
@@ -103,12 +114,22 @@ export default function Home() {
               key={idx}
               className="hero-slide"
               style={{
-                backgroundImage: `url('${slide.image}')`,
                 opacity: currentSlide === idx ? 1 : 0,
                 pointerEvents: currentSlide === idx ? "auto" : "none",
-                zIndex: currentSlide === idx ? 2 : 1
+                zIndex: currentSlide === idx ? 2 : 1,
+                position: "absolute",
+                inset: 0,
               }}
             >
+              <Image
+                src={slide.image}
+                alt={slide.title}
+                fill
+                style={{ objectFit: "cover" }}
+                priority={idx === 0}
+                loading={idx === 0 ? "eager" : "lazy"}
+                sizes="100vw"
+              />
               <div className="hero-slide-overlay"></div>
               <div className="hero-slide-content">
                 <h2>{slide.title}</h2>

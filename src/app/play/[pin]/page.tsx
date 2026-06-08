@@ -1,9 +1,19 @@
 "use client";
 
 import React, { use, useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import Sandbox from "@/components/Sandbox";
 import { EventConfig } from "@/components/SuperAdminDashboard";
+
+// Dynamically load the heavy Sandbox — only after PIN is validated
+const Sandbox = dynamic(() => import("@/components/Sandbox"), {
+  loading: () => (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-dark)" }}>
+      <div className="lobby-loader" />
+    </div>
+  ),
+  ssr: false,
+});
 
 const DEFAULT_DEMO_EVENT: EventConfig = {
   id: "DEMO01",
