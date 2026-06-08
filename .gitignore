@@ -46,3 +46,9 @@ next-env.d.ts
 *.avi
 *.mkv
 *.webm
+
+# large public images - use CDN or Vercel image optimization instead
+public/*.jpg
+public/*.jpeg
+public/*.png
+public/*.webp

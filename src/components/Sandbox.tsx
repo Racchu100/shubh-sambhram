@@ -178,68 +178,163 @@ export default function Sandbox({
   // --- ANALYTICS / POST EVENT REPORT STATE ---
   const [reportWinners, setReportWinners] = useState<Array<{ gameName: string; winnerName: string; prizeTag: string }>>([]);
 
-  // --- REAL-TIME STATE SYNC VIA LOCALSTORAGE ---
-  // Outward State Sync (Write to localStorage)
+  // --- REAL-TIME STATE SYNC VIA SERVER API ---
   useEffect(() => {
     if (role === "both") return;
 
-    const stateObj = {
-      activeGame,
-      isStarted,
-      eventName,
-      maxPlayers,
-      activeGames,
-      playerBanner,
-      lobbyPlayers,
-      housieDrawnNumbers,
-      housieLastDrawn,
-      housiePatterns,
-      housieClaimsQueue,
-      eliminateRound,
-      eliminateOptions,
-      eliminateIsFinished,
-      eliminateWinner,
-      eliminateIsTieBreaker,
-      eliminateTieWinners,
-      boatStatus,
-      boatPositions,
-      boatResults,
-      boatIsTieBreaker,
-      boatTieWinners,
-      huntCurrentClueIdx,
-      huntHintsReleased,
-      huntClues,
-      memoryGridSize,
-      memoryTheme,
-      memoryPairsMatched,
-      memoryDeck,
-      arrowDifficulty,
-      arrowStatus,
-      arrowMaze,
-      arrowFinishOrder,
-      arrowElapsedTime,
-      arrowFormat,
-      arrowPlayerStates,
-      escapeDifficulty,
-      escapeStatus,
-      escapeMaze,
-      escapeElapsedTime,
-      escapeFormat,
-      escapePlayerStates,
-      escapeFinishOrder,
-      reportWinners,
+    // Helper to merge state differences into local React state
+    const syncFromServer = (data: any) => {
+      const updateIfDiff = (current: any, setter: Function, newVal: any) => {
+        if (newVal === undefined) return;
+        if (JSON.stringify(current) !== JSON.stringify(newVal)) {
+          setter(newVal);
+        }
+      };
+
+      updateIfDiff(activeGame, setActiveGame, data.activeGame);
+      updateIfDiff(isStarted, setIsStarted, data.isStarted);
+      updateIfDiff(eventName, setEventName, data.eventName);
+      updateIfDiff(maxPlayers, setMaxPlayers, data.maxPlayers);
+      updateIfDiff(activeGames, setActiveGames, data.activeGames);
+      updateIfDiff(playerBanner, setPlayerBanner, data.playerBanner);
+      updateIfDiff(lobbyPlayers, setLobbyPlayers, data.lobbyPlayers);
+      updateIfDiff(housieDrawnNumbers, setHousieDrawnNumbers, data.housieDrawnNumbers);
+      updateIfDiff(housieLastDrawn, setHousieLastDrawn, data.housieLastDrawn);
+      updateIfDiff(housiePatterns, setHousiePatterns, data.housiePatterns);
+      updateIfDiff(housieClaimsQueue, setHousieClaimsQueue, data.housieClaimsQueue);
+      updateIfDiff(eliminateRound, setEliminateRound, data.eliminateRound);
+      updateIfDiff(eliminateOptions, setEliminateOptions, data.eliminateOptions);
+      updateIfDiff(eliminateIsFinished, setEliminateIsFinished, data.eliminateIsFinished);
+      updateIfDiff(eliminateWinner, setEliminateWinner, data.eliminateWinner);
+      updateIfDiff(eliminateIsTieBreaker, setEliminateIsTieBreaker, data.eliminateIsTieBreaker);
+      updateIfDiff(eliminateTieWinners, setEliminateTieWinners, data.eliminateTieWinners);
+      updateIfDiff(boatStatus, setBoatStatus, data.boatStatus);
+      updateIfDiff(boatPositions, setBoatPositions, data.boatPositions);
+      updateIfDiff(boatResults, setBoatResults, data.boatResults);
+      updateIfDiff(boatIsTieBreaker, setBoatIsTieBreaker, data.boatIsTieBreaker);
+      updateIfDiff(boatTieWinners, setBoatTieWinners, data.boatTieWinners);
+      updateIfDiff(huntCurrentClueIdx, setHuntCurrentClueIdx, data.huntCurrentClueIdx);
+      updateIfDiff(huntHintsReleased, setHuntHintsReleased, data.huntHintsReleased);
+      updateIfDiff(huntClues, setHuntClues, data.huntClues);
+      updateIfDiff(huntSolves, setHuntSolves, data.huntSolves);
+      updateIfDiff(memoryGridSize, setMemoryGridSize, data.memoryGridSize);
+      updateIfDiff(memoryTheme, setMemoryTheme, data.memoryTheme);
+      updateIfDiff(memoryPairsMatched, setMemoryPairsMatched, data.memoryPairsMatched);
+      updateIfDiff(memoryDeck, setMemoryDeck, data.memoryDeck);
+      updateIfDiff(arrowDifficulty, setArrowDifficulty, data.arrowDifficulty);
+      updateIfDiff(arrowStatus, setArrowStatus, data.arrowStatus);
+      updateIfDiff(arrowMaze, setArrowMaze, data.arrowMaze);
+      updateIfDiff(arrowFinishOrder, setArrowFinishOrder, data.arrowFinishOrder);
+      updateIfDiff(arrowElapsedTime, setArrowElapsedTime, data.arrowElapsedTime);
+      updateIfDiff(arrowFormat, setArrowFormat, data.arrowFormat);
+      updateIfDiff(arrowPlayerStates, setArrowPlayerStates, data.arrowPlayerStates);
+      updateIfDiff(escapeDifficulty, setEscapeDifficulty, data.escapeDifficulty);
+      updateIfDiff(escapeStatus, setEscapeStatus, data.escapeStatus);
+      updateIfDiff(escapeMaze, setEscapeMaze, data.escapeMaze);
+      updateIfDiff(escapeElapsedTime, setEscapeElapsedTime, data.escapeElapsedTime);
+      updateIfDiff(escapeFormat, setEscapeFormat, data.escapeFormat);
+      updateIfDiff(escapePlayerStates, setEscapePlayerStates, data.escapePlayerStates);
+      updateIfDiff(escapeFinishOrder, setEscapeFinishOrder, data.escapeFinishOrder);
+      updateIfDiff(reportWinners, setReportWinners, data.reportWinners);
+
+      // If playing, sync points specifically from lobbyPlayers array
+      if (role === "player") {
+        const meInLobby = data.lobbyPlayers?.find((p: any) => p.name === playerName);
+        if (meInLobby && meInLobby.points !== undefined) {
+          updateIfDiff(playerPoints, setPlayerPoints, meInLobby.points);
+        }
+      }
     };
 
-    try {
-      const serialized = JSON.stringify(stateObj);
-      const currentStored = localStorage.getItem(`shubh_sambhram_event_${initialEventPin}_gameState`);
-      if (serialized !== currentStored) {
-        localStorage.setItem(`shubh_sambhram_event_${initialEventPin}_gameState`, serialized);
+    // Host Outward Sync (Heartbeat POST every 1000ms)
+    // Players Inward Sync (Polling GET every 1000ms)
+    let syncInterval: NodeJS.Timeout;
+
+    const performSync = async () => {
+      try {
+        if (role === "admin") {
+          // Host sends current state to API
+          const stateObj = {
+            activeGame,
+            isStarted,
+            eventName,
+            maxPlayers,
+            activeGames,
+            playerBanner,
+            lobbyPlayers,
+            housieDrawnNumbers,
+            housieLastDrawn,
+            housiePatterns,
+            housieClaimsQueue,
+            eliminateRound,
+            eliminateOptions,
+            eliminateIsFinished,
+            eliminateWinner,
+            eliminateIsTieBreaker,
+            eliminateTieWinners,
+            boatStatus,
+            boatPositions,
+            boatResults,
+            boatIsTieBreaker,
+            boatTieWinners,
+            huntCurrentClueIdx,
+            huntHintsReleased,
+            huntClues,
+            huntSolves,
+            memoryGridSize,
+            memoryTheme,
+            memoryPairsMatched,
+            memoryDeck,
+            arrowDifficulty,
+            arrowStatus,
+            arrowMaze,
+            arrowFinishOrder,
+            arrowElapsedTime,
+            arrowFormat,
+            arrowPlayerStates,
+            escapeDifficulty,
+            escapeStatus,
+            escapeMaze,
+            escapeElapsedTime,
+            escapeFormat,
+            escapePlayerStates,
+            escapeFinishOrder,
+            reportWinners,
+          };
+
+          const res = await fetch(`/api/event/${initialEventPin}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ role: "admin", stateUpdate: stateObj }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            syncFromServer(data);
+          }
+        } else if (role === "player") {
+          // Player pulls state from API
+          const res = await fetch(`/api/event/${initialEventPin}`);
+          if (res.ok) {
+            const data = await res.json();
+            syncFromServer(data);
+          }
+        }
+      } catch (err) {
+        console.error("Game state sync error:", err);
       }
-    } catch (err) {
-      console.error("Failed to write game state sync:", err);
-    }
+    };
+
+    // Run immediately on mount
+    performSync();
+
+    // Start periodic timer
+    syncInterval = setInterval(performSync, 1000);
+
+    return () => clearInterval(syncInterval);
   }, [
+    role,
+    initialEventPin,
+    playerName,
     activeGame,
     isStarted,
     eventName,
@@ -265,6 +360,7 @@ export default function Sandbox({
     huntCurrentClueIdx,
     huntHintsReleased,
     huntClues,
+    huntSolves,
     memoryGridSize,
     memoryTheme,
     memoryPairsMatched,
@@ -284,130 +380,7 @@ export default function Sandbox({
     escapePlayerStates,
     escapeFinishOrder,
     reportWinners,
-    initialEventPin,
-    role,
   ]);
-
-  // Inward State Sync (Read from localStorage)
-  useEffect(() => {
-    if (role === "both") return;
-
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === `shubh_sambhram_event_${initialEventPin}_gameState` && e.newValue) {
-        try {
-          const data = JSON.parse(e.newValue);
-          const updateIfDiff = (current: any, setter: Function, newVal: any) => {
-            if (newVal === undefined) return;
-            if (JSON.stringify(current) !== JSON.stringify(newVal)) {
-              setter(newVal);
-            }
-          };
-
-          updateIfDiff(activeGame, setActiveGame, data.activeGame);
-          updateIfDiff(isStarted, setIsStarted, data.isStarted);
-          updateIfDiff(eventName, setEventName, data.eventName);
-          updateIfDiff(maxPlayers, setMaxPlayers, data.maxPlayers);
-          updateIfDiff(activeGames, setActiveGames, data.activeGames);
-          updateIfDiff(playerBanner, setPlayerBanner, data.playerBanner);
-          updateIfDiff(lobbyPlayers, setLobbyPlayers, data.lobbyPlayers);
-          updateIfDiff(housieDrawnNumbers, setHousieDrawnNumbers, data.housieDrawnNumbers);
-          updateIfDiff(housieLastDrawn, setHousieLastDrawn, data.housieLastDrawn);
-          updateIfDiff(housiePatterns, setHousiePatterns, data.housiePatterns);
-          updateIfDiff(housieClaimsQueue, setHousieClaimsQueue, data.housieClaimsQueue);
-          updateIfDiff(eliminateRound, setEliminateRound, data.eliminateRound);
-          updateIfDiff(eliminateOptions, setEliminateOptions, data.eliminateOptions);
-          updateIfDiff(eliminateIsFinished, setEliminateIsFinished, data.eliminateIsFinished);
-          updateIfDiff(eliminateWinner, setEliminateWinner, data.eliminateWinner);
-          updateIfDiff(eliminateIsTieBreaker, setEliminateIsTieBreaker, data.eliminateIsTieBreaker);
-          updateIfDiff(eliminateTieWinners, setEliminateTieWinners, data.eliminateTieWinners);
-          updateIfDiff(boatStatus, setBoatStatus, data.boatStatus);
-          updateIfDiff(boatPositions, setBoatPositions, data.boatPositions);
-          updateIfDiff(boatResults, setBoatResults, data.boatResults);
-          updateIfDiff(boatIsTieBreaker, setBoatIsTieBreaker, data.boatIsTieBreaker);
-          updateIfDiff(boatTieWinners, setBoatTieWinners, data.boatTieWinners);
-          updateIfDiff(huntCurrentClueIdx, setHuntCurrentClueIdx, data.huntCurrentClueIdx);
-          updateIfDiff(huntHintsReleased, setHuntHintsReleased, data.huntHintsReleased);
-          updateIfDiff(huntClues, setHuntClues, data.huntClues);
-          updateIfDiff(memoryGridSize, setMemoryGridSize, data.memoryGridSize);
-          updateIfDiff(memoryTheme, setMemoryTheme, data.memoryTheme);
-          updateIfDiff(memoryPairsMatched, setMemoryPairsMatched, data.memoryPairsMatched);
-          updateIfDiff(memoryDeck, setMemoryDeck, data.memoryDeck);
-          updateIfDiff(arrowDifficulty, setArrowDifficulty, data.arrowDifficulty);
-          updateIfDiff(arrowStatus, setArrowStatus, data.arrowStatus);
-          updateIfDiff(arrowMaze, setArrowMaze, data.arrowMaze);
-          updateIfDiff(arrowFinishOrder, setArrowFinishOrder, data.arrowFinishOrder);
-          updateIfDiff(arrowElapsedTime, setArrowElapsedTime, data.arrowElapsedTime);
-          updateIfDiff(arrowFormat, setArrowFormat, data.arrowFormat);
-          updateIfDiff(arrowPlayerStates, setArrowPlayerStates, data.arrowPlayerStates);
-          updateIfDiff(escapeDifficulty, setEscapeDifficulty, data.escapeDifficulty);
-          updateIfDiff(escapeStatus, setEscapeStatus, data.escapeStatus);
-          updateIfDiff(escapeMaze, setEscapeMaze, data.escapeMaze);
-          updateIfDiff(escapeElapsedTime, setEscapeElapsedTime, data.escapeElapsedTime);
-          updateIfDiff(escapeFormat, setEscapeFormat, data.escapeFormat);
-          updateIfDiff(escapePlayerStates, setEscapePlayerStates, data.escapePlayerStates);
-          updateIfDiff(escapeFinishOrder, setEscapeFinishOrder, data.escapeFinishOrder);
-          updateIfDiff(reportWinners, setReportWinners, data.reportWinners);
-        } catch (err) {
-          console.error("Failed to parse storage sync event:", err);
-        }
-      }
-    };
-
-    window.addEventListener("storage", handleStorageChange);
-    // Initial sync
-    try {
-      const stored = localStorage.getItem(`shubh_sambhram_event_${initialEventPin}_gameState`);
-      if (stored) {
-        const data = JSON.parse(stored);
-        if (data.activeGame) setActiveGame(data.activeGame);
-        if (data.isStarted !== undefined) setIsStarted(data.isStarted);
-        if (data.eventName) setEventName(data.eventName);
-        if (data.maxPlayers) setMaxPlayers(data.maxPlayers);
-        if (data.activeGames) setActiveGames(data.activeGames);
-        if (data.playerBanner) setPlayerBanner(data.playerBanner);
-        if (data.lobbyPlayers) setLobbyPlayers(data.lobbyPlayers);
-        if (data.housieDrawnNumbers) setHousieDrawnNumbers(data.housieDrawnNumbers);
-        if (data.housieLastDrawn !== undefined) setHousieLastDrawn(data.housieLastDrawn);
-        if (data.housiePatterns) setHousiePatterns(data.housiePatterns);
-        if (data.housieClaimsQueue) setHousieClaimsQueue(data.housieClaimsQueue);
-        if (data.eliminateRound !== undefined) setEliminateRound(data.eliminateRound);
-        if (data.eliminateOptions) setEliminateOptions(data.eliminateOptions);
-        if (data.eliminateIsFinished !== undefined) setEliminateIsFinished(data.eliminateIsFinished);
-        if (data.eliminateWinner !== undefined) setEliminateWinner(data.eliminateWinner);
-        if (data.eliminateIsTieBreaker !== undefined) setEliminateIsTieBreaker(data.eliminateIsTieBreaker);
-        if (data.eliminateTieWinners) setEliminateTieWinners(data.eliminateTieWinners);
-        if (data.boatStatus) setBoatStatus(data.boatStatus);
-        if (data.boatPositions) setBoatPositions(data.boatPositions);
-        if (data.boatResults) setBoatResults(data.boatResults);
-        if (data.boatIsTieBreaker !== undefined) setBoatIsTieBreaker(data.boatIsTieBreaker);
-        if (data.boatTieWinners) setBoatTieWinners(data.boatTieWinners);
-        if (data.huntCurrentClueIdx !== undefined) setHuntCurrentClueIdx(data.huntCurrentClueIdx);
-        if (data.huntHintsReleased) setHuntHintsReleased(data.huntHintsReleased);
-        if (data.huntClues) setHuntClues(data.huntClues);
-        if (data.memoryGridSize) setMemoryGridSize(data.memoryGridSize);
-        if (data.memoryTheme) setMemoryTheme(data.memoryTheme);
-        if (data.memoryPairsMatched !== undefined) setMemoryPairsMatched(data.memoryPairsMatched);
-        if (data.memoryDeck) setMemoryDeck(data.memoryDeck);
-        if (data.arrowDifficulty) setArrowDifficulty(data.arrowDifficulty);
-        if (data.arrowStatus) setArrowStatus(data.arrowStatus);
-        if (data.arrowMaze) setArrowMaze(data.arrowMaze);
-        if (data.arrowFinishOrder) setArrowFinishOrder(data.arrowFinishOrder);
-        if (data.arrowElapsedTime !== undefined) setArrowElapsedTime(data.arrowElapsedTime);
-        if (data.arrowFormat) setArrowFormat(data.arrowFormat);
-        if (data.arrowPlayerStates) setArrowPlayerStates(data.arrowPlayerStates);
-        if (data.escapeDifficulty) setEscapeDifficulty(data.escapeDifficulty);
-        if (data.escapeStatus) setEscapeStatus(data.escapeStatus);
-        if (data.escapeMaze) setEscapeMaze(data.escapeMaze);
-        if (data.escapeElapsedTime !== undefined) setEscapeElapsedTime(data.escapeElapsedTime);
-        if (data.escapeFormat) setEscapeFormat(data.escapeFormat);
-        if (data.escapePlayerStates) setEscapePlayerStates(data.escapePlayerStates);
-        if (data.escapeFinishOrder) setEscapeFinishOrder(data.escapeFinishOrder);
-        if (data.reportWinners) setReportWinners(data.reportWinners);
-      }
-    } catch {}
-
-    return () => window.removeEventListener("storage", handleStorageChange);
-  }, [role, initialEventPin]);
 
   // --- EVENT HANDLERS ---
   const handleStartEvent = () => {
@@ -466,6 +439,13 @@ export default function Sandbox({
     setPlayerName(name);
     setPlayerJoined(true);
     triggerPlayerBanner(`Connected to ${eventName}!`, "🎉");
+
+    // Sync join event to API
+    fetch(`/api/event/${initialEventPin}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role: "player", playerName: name, action: "join" }),
+    }).catch(console.error);
   };
 
   // --- GAME 1: HOUSIE (TAMBOLA) LOGIC ---
@@ -550,6 +530,18 @@ export default function Sandbox({
 
   const handleHousieSubmitClaim = (claim: { player: string; pattern: string; ticket: number[][]; marked: boolean[][] }) => {
     setHousieClaimsQueue((prev) => [...prev, claim]);
+
+    // Sync claim to API
+    fetch(`/api/event/${initialEventPin}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        role: "player",
+        playerName: claim.player,
+        action: "housie_claim",
+        stateUpdate: { claim }
+      }),
+    }).catch(console.error);
   };
 
   const handleHousieVerifyClaim = (idx: number, approve: boolean) => {
@@ -718,9 +710,22 @@ export default function Sandbox({
         return o;
       })
     );
+    const oldVote = eliminatePlayerVote;
     setEliminatePlayerVote(optionId);
     const label = eliminateOptions.find((o) => o.id === optionId)?.label || "";
     setEliminateFeedback(`Vote Status: 🔴 Backing ${label}`);
+
+    // Sync vote to API
+    fetch(`/api/event/${initialEventPin}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        role: "player",
+        playerName,
+        action: "vote",
+        stateUpdate: { optionId, previousOptionId: oldVote }
+      }),
+    }).catch(console.error);
   };
 
   const handleConfirmElimination = () => {
@@ -941,6 +946,18 @@ export default function Sandbox({
       ...prev,
       [playerName]: next,
     }));
+
+    // Sync boat position to API
+    fetch(`/api/event/${initialEventPin}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        role: "player",
+        playerName,
+        action: "boat_tap",
+        stateUpdate: { boatPositions: { [playerName]: next } }
+      }),
+    }).catch(console.error);
   };
 
   const startRacingSimulation = () => {
@@ -1135,6 +1152,18 @@ export default function Sandbox({
       } else {
         triggerPlayerBanner("Correct! Next clue unlocked.", "🗝️");
       }
+
+      // Sync solve to API
+      fetch(`/api/event/${initialEventPin}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          role: "player",
+          playerName,
+          action: "hunt_solve",
+          stateUpdate: { clueIdx: huntCurrentClueIdx, points: 120, wrong: false, skipped: false }
+        }),
+      }).catch(console.error);
     } else {
       setPlayerHuntFeedback("❌ Wrong answer! Moving to next clue.");
       setHuntSolves((prev) => [...prev, { player: playerName, clueIdx: huntCurrentClueIdx, points: 0, wrong: true }]);
@@ -1152,6 +1181,18 @@ export default function Sandbox({
       } else {
         triggerPlayerBanner("Wrong answer! Next clue unlocked.", "❌");
       }
+
+      // Sync solve to API
+      fetch(`/api/event/${initialEventPin}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          role: "player",
+          playerName,
+          action: "hunt_solve",
+          stateUpdate: { clueIdx: huntCurrentClueIdx, points: 0, wrong: true, skipped: false }
+        }),
+      }).catch(console.error);
     }
   };
 
@@ -1171,6 +1212,18 @@ export default function Sandbox({
     } else {
       triggerPlayerBanner("Clue Skipped! Next one unlocked.", "💨");
     }
+
+    // Sync skip to API
+    fetch(`/api/event/${initialEventPin}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        role: "player",
+        playerName,
+        action: "hunt_solve",
+        stateUpdate: { clueIdx: huntCurrentClueIdx, points: 0, wrong: false, skipped: true }
+      }),
+    }).catch(console.error);
   };
 
   // --- GAME 5: PICTURE MEMORY LOGIC ---
@@ -1412,7 +1465,8 @@ export default function Sandbox({
       });
       if (arrowTimerRef.current) clearInterval(arrowTimerRef.current);
       triggerPlayerBanner(`You escaped! Rank #${rank} 🏹`, "🏆", 5000);
-      setPlayerPoints(p => p + (rank === 1 ? 200 : rank === 2 ? 150 : rank === 3 ? 100 : 60));
+      const pts = rank === 1 ? 200 : rank === 2 ? 150 : rank === 3 ? 100 : 60;
+      setPlayerPoints(p => p + pts);
       
       // Add winner to post-event report
       const medal = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : "🎖️";
@@ -1420,8 +1474,20 @@ export default function Sandbox({
         ...prev,
         { gameName: "Arrow Finisher", winnerName: playerName, prizeTag: `${medal} Escape Champion` }
       ]);
+
+      // Sync finish to API
+      fetch(`/api/event/${initialEventPin}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          role: "player",
+          playerName,
+          action: "arrow_finish",
+          stateUpdate: { time: arrowElapsedTime, rank, points: pts }
+        }),
+      }).catch(console.error);
     }
-  }, [arrowMaze, arrowPlayerFinished, arrowStatus, arrowFinishOrder, arrowElapsedTime, playerName]);
+  }, [arrowMaze, arrowPlayerFinished, arrowStatus, arrowFinishOrder, arrowElapsedTime, playerName, initialEventPin]);
 
   const handleArrowReset = () => {
     if (arrowTimerRef.current) clearInterval(arrowTimerRef.current);
@@ -1562,7 +1628,8 @@ export default function Sandbox({
         escapeBotTimersRef.current.forEach(clearInterval);
 
         triggerPlayerBanner(`You escaped the arrows! Rank #${rank} 🏹`, "🏆", 5000);
-        setPlayerPoints(p => p + (rank === 1 ? 200 : rank === 2 ? 150 : rank === 3 ? 100 : 60));
+        const pts = rank === 1 ? 200 : rank === 2 ? 150 : rank === 3 ? 100 : 60;
+        setPlayerPoints(p => p + pts);
 
         // Add winner to post-event report
         const medal = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : "🎖️";
@@ -1570,6 +1637,18 @@ export default function Sandbox({
           ...prevWinners,
           { gameName: "Arrow Escape", winnerName: playerName, prizeTag: `${medal} Winding Path Champion` }
         ]);
+
+        // Sync finish to API
+        fetch(`/api/event/${initialEventPin}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            role: "player",
+            playerName,
+            action: "escape_finish",
+            stateUpdate: { time: escapeElapsedTime, rank, points: pts }
+          }),
+        }).catch(console.error);
       }
 
       return {

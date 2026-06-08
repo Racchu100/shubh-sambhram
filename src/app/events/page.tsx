@@ -107,22 +107,22 @@ export default function EventsPortfolioPage() {
 
   const videos = [
     {
-      src: "/From KlickPin CF Amazing Date Night Outfit Ideas for a Cozy Vibe - Pin-809944314258527187.mp4",
+      src: "/From KlickPin CF Amazing Date Night Outfit Ideas for a Cozy Vibe - Pin-809944314258527187.webm",
       title: "💖 Romantic Proposal Highlights",
       desc: "Private outdoor proposal setup with custom neon signs and rose arches.",
     },
     {
-      src: "/From KlickPin CF Charming world culture moments with charm and ideas for creative people with beautiful world vibes 🌏 - Pin-907545762406783443.mp4",
+      src: "/From KlickPin CF Charming world culture moments with charm and ideas for creative people with beautiful world vibes 🌏 - Pin-907545762406783443.webm",
       title: "🌏 Traditional Theme Walkthrough",
       desc: "Elegant cultural celebration decor and traditional entry backdrops.",
     },
     {
-      src: "/From KlickPin CF Practical Digital Detox Ideas for a Cozy Vibe - Pin-836684437044236034.mp4",
+      src: "/From KlickPin CF Practical Digital Detox Ideas for a Cozy Vibe - Pin-836684437044236034.webm",
       title: "🍽️ Cozy Date & Dinner Setup",
       desc: "Chic banquet tables styled with warm candle lanterns and premium centerpieces.",
     },
     {
-      src: "/From KlickPin CF Practical Resin Craft Ideas for Right Now - Pin-870531802963938104.mp4",
+      src: "/From KlickPin CF Practical Resin Craft Ideas for Right Now - Pin-870531802963938104.webm",
       title: "✨ Creative Event Artistry",
       desc: "Close-up details of customized structural props and floral crafts.",
     },
