@@ -272,7 +272,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ pin
 
     // HOST SYNC
     // Keep player-driven properties from the server's state BEFORE overwrite
-    const serverHousieClaimsQueue = state.housieClaimsQueue || [];
+    let serverHousieClaimsQueue = state.housieClaimsQueue || [];
+    const housieProcessedClaims = stateUpdate.housieProcessedClaims || [];
+    serverHousieClaimsQueue = serverHousieClaimsQueue.filter((c: any) =>
+      !housieProcessedClaims.some((pc: any) => pc.player === c.player && pc.pattern === c.pattern)
+    );
     const serverArrowFinishOrder = state.arrowFinishOrder || [];
     const serverEscapeFinishOrder = state.escapeFinishOrder || [];
     const serverReportWinners = state.reportWinners || [];

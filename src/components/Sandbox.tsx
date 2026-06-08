@@ -325,6 +325,7 @@ export default function Sandbox({
             escapeElapsedTime,
             escapeFormat,
             escapePlayerStates,
+            housieProcessedClaims: processedClaimsRef.current,
           };
 
           const res = await fetch(`/api/event/${initialEventPin}`, {
@@ -559,6 +560,7 @@ export default function Sandbox({
     setHousieDrawnNumbers([]);
     setHousieLastDrawn(null);
     setHousieClaimsQueue([]);
+    processedClaimsRef.current = [];
     setHousiePatterns((prev) => {
       const reset = { ...prev };
       Object.keys(reset).forEach((k) => (reset[k].winner = null));
