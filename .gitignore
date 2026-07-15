@@ -47,8 +47,4 @@ next-env.d.ts
 *.mkv
 *.webm
 
-# large public images - use CDN or Vercel image optimization instead
-public/*.jpg
-public/*.jpeg
-public/*.png
-public/*.webp
+# public images are committed to Git for Vercel deployment
