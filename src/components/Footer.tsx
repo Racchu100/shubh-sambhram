@@ -99,10 +99,7 @@ export default function Footer() {
             <li style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
               <span>📍</span>
               <span>
-                12, Grand Festive Plaza, Residency Road,
-                <br />
-                Bengaluru, Karnataka - 560025
-              </span>
+              <span>Mangalore, Karnataka</span>
             </li>
             <li style={{ display: "flex", gap: "8px", alignItems: "center" }}>
               <span>📞</span>

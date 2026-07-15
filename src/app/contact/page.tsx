@@ -203,13 +203,9 @@ function ContactFormContent() {
             <li style={{ display: "flex", gap: "12px" }}>
               <span style={{ fontSize: "1.4rem" }}>📍</span>
               <div>
-                <strong>Headquarters Office:</strong>
+                <strong>Location:</strong>
                 <br />
-                <span style={{ color: "#555" }}>
-                  12, Grand Festive Plaza, Residency Road,
-                  <br />
-                  Bengaluru, Karnataka - 560025
-                </span>
+                <span style={{ color: "#555" }}>Mangalore, Karnataka</span>
               </div>
             </li>
             <li style={{ display: "flex", gap: "12px", alignItems: "center" }}>
