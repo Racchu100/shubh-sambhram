@@ -40,11 +40,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# large media files (videos, etc.)
+# large media files (videos, etc.) - keep mp4/mov etc out but allow webm for public use
 *.mp4
 *.mov
 *.avi
 *.mkv
-*.webm
 
 # public images are committed to Git for Vercel deployment
