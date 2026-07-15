@@ -98,7 +98,6 @@ export default function Footer() {
           <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "12px", fontSize: "0.9rem" }}>
             <li style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
               <span>📍</span>
-              <span>
               <span>Mangalore, Karnataka</span>
             </li>
             <li style={{ display: "flex", gap: "8px", alignItems: "center" }}>
