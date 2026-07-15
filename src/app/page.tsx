@@ -172,7 +172,7 @@ export default function Home() {
           <div className="services-card-grid">
             {/* Wedding Card */}
             <div className="service-item-card glass-panel">
-              <div className="service-card-image" style={{ backgroundImage: "url('/golden-wedding-stage-photo.jpg')" }}>
+              <div className="service-card-image" style={{ backgroundImage: "url('/golden-wedding-stage-photo.webp')" }}>
                 <div className="service-card-image-overlay"></div>
               </div>
               <div className="service-card-content">
@@ -183,7 +183,7 @@ export default function Home() {
 
             {/* Surprise Card */}
             <div className="service-item-card glass-panel">
-              <div className="service-card-image" style={{ backgroundImage: "url('/romantic-wedding-photocall-with-neon-love-sign.jpg')" }}>
+              <div className="service-card-image" style={{ backgroundImage: "url('/romantic-wedding-photocall-with-neon-love-sign.webp')" }}>
                 <div className="service-card-image-overlay"></div>
               </div>
               <div className="service-card-content">
@@ -194,7 +194,7 @@ export default function Home() {
 
             {/* Birthday Card */}
             <div className="service-item-card glass-panel">
-              <div className="service-card-image" style={{ backgroundImage: "url('/shine-wedding-altar-newlyweds-stands-backyard-decorated-with-balloons.jpg')" }}>
+              <div className="service-card-image" style={{ backgroundImage: "url('/shine-wedding-altar-newlyweds-stands-backyard-decorated-with-balloons.webp')" }}>
                 <div className="service-card-image-overlay"></div>
               </div>
               <div className="service-card-content">
@@ -205,7 +205,7 @@ export default function Home() {
 
             {/* Corporate Card */}
             <div className="service-item-card glass-panel">
-              <div className="service-card-image" style={{ backgroundImage: "url('/elegant-wedding-ceremony-table-with-floral-candle-decor.jpg')" }}>
+              <div className="service-card-image" style={{ backgroundImage: "url('/elegant-wedding-ceremony-table-with-floral-candle-decor.webp')" }}>
                 <div className="service-card-image-overlay"></div>
               </div>
               <div className="service-card-content">
